@@ -39,4 +39,8 @@ var app = {
 
 jQuery(document).ready(function() {
 	app.init();
+	if( jQuery('.ccc-option-custom-color').length > 0 ) {
+		jQuery('.ccc-option-custom-color').wpColorPicker();
+	}
 });
+

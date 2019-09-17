@@ -3,7 +3,7 @@
 Plugin Name: Cryptocurrency Converter
 Plugin URI: https://www.nettantra.com/wordpress/?utm_src=cryptocurrency-converter
 Description: This plugin allows to add shortcode on your WordPress site and convert over 1,000 crypto currencies. [Cryptocurrency_Converter title="Your Title"]
-Version: 0.4
+Version: 0.6
 Author: NetTantra
 Author URI: https://www.nettantra.com/wordpress/?utm_src=cryptocurrency-converter
 Text Domain: cryptocurrency-converter
@@ -29,17 +29,23 @@ class CryptoCurrencyConverter {
 
   function __construct() {
     $this->default_api_key = 'a8s9pqXrseifkK4FbYG1r6qbx7KonG9fqYcgKlwLzQu0KzTq1EaaY0lcs0cc2n5C';
-    add_action( 'admin_enqueue_scripts', array($this, 'ccc_load_wp_admin_style'));
+    add_action( 'admin_enqueue_scripts', array( $this, 'ccc_load_wp_admin_scripts' ) );
   }
 
-  public function ccc_load_wp_admin_style($hook) {
+  public function ccc_load_wp_admin_scripts( $hook ) {
     if($hook != 'settings_page_cryptocurrency-converter') {
         return;
     }
     wp_enqueue_style( 'select2-css',  plugin_dir_url( __FILE__ ) . 'assets/css/select2.min.css', '4.0.6' );
+    
     wp_enqueue_script( 'select2-js',  plugin_dir_url( __FILE__ ) . 'assets/js/select2.min.js', '4.0.6' );
+    
     wp_enqueue_script( 'ccc-currencies',  plugin_dir_url( __FILE__ ) . 'assets/js/all.currencies.js', '1.0' );
-    wp_enqueue_script( 'ccc-main',  plugin_dir_url( __FILE__ ) . 'assets/js/admin-ccc-main.js', '1.0' );
+
+    wp_enqueue_style( 'wp-color-picker' );
+
+    wp_enqueue_script( 'ccc-admin-main', plugins_url('/assets/js/admin-ccc-main.js', __FILE__ ), array( 'wp-color-picker' ), false, true );
+
   }
 
   public function ccc_admin_page() {
@@ -111,8 +117,16 @@ class CryptoCurrencyConverter {
 								<img style="height: 18px; vertical-align: bottom;" src="<?php echo plugin_dir_url( __FILE__ ).'/assets/images/pumpkin.png'; ?>" alt="pumpkin">
 								Pumpkin
 							</label></p>
+              <p>- OR -</p>
+              <p><label for="custom-color">
+                <?php
+                  $default_color = (get_option('ccc_option_custom_color')) ? get_option( 'ccc_option_custom_color' ) : '';
+                ?>
+                <input data-default-color=""  name="options[ccc_option_custom_color]" type="text" id="ccc_option_custom_color" value="<?php echo esc_attr( $default_color ); ?>" class="regular-text ccc-option-custom-color">
+              </label></p>
             </td>
           </tr>
+
 
           <tr><th colspan="2"><hr> <h3><?php echo esc_html__('Custom Form Field Labels', 'cryptocurrency-converter'); ?></h3></th></tr>
           <tr>
@@ -142,7 +156,9 @@ class CryptoCurrencyConverter {
   }
 
   static function ccc_save_options() {
+
 		check_Admin_referer('cryptocurrency-converter-options');
+
 		$data = stripslashes_deep($_POST['options']);
     update_option('ccc_option_api', sanitize_text_field($data['ccc_api']));
     update_option('ccc_option_default_from', sanitize_text_field($data['ccc_default_from']));
@@ -152,7 +168,9 @@ class CryptoCurrencyConverter {
     update_option('ccc_option_from_label', sanitize_text_field($data['ccc_from_label']));
     update_option('ccc_option_to_label', sanitize_text_field($data['ccc_to_label']));
 		update_option('ccc_option_result_label', sanitize_text_field($data['ccc_result_label']));
-		update_option('ccc_option_theme', sanitize_text_field($data['ccc_option_theme']));
+    update_option('ccc_option_theme', sanitize_text_field($data['ccc_option_theme']));
+    
+    update_option('ccc_option_custom_color', sanitize_text_field($data['ccc_option_custom_color']));
 
 		wp_safe_redirect( add_query_arg('updated', 'true', wp_get_referer() ) );
 	}
@@ -182,23 +200,56 @@ class CryptoCurrencyConverter {
     $this->ccc_option_from_label         = get_option( 'ccc_option_from_label' );
     $this->ccc_option_to_label           = get_option( 'ccc_option_to_label' );
 		$this->ccc_option_result_label       = get_option( 'ccc_option_result_label' );
-		$this->ccc_option_theme       			 = get_option( 'ccc_option_theme' );
+    $this->ccc_option_theme              = get_option( 'ccc_option_theme' );
+    $this->ccc_option_custom_color              = get_option( 'ccc_option_custom_color' );
+
   }
 
   public function ccc_shortcode($atts) {
 
     $this->ccc_get_otptions();
-    add_action('wp_enqueue_script', $this->ccc_enqueue_public_scripts());
+    $this->ccc_enqueue_public_scripts();
 
     $extract_shortcode = shortcode_atts(array(
       'title' => ''
     ), $atts);
+
     $override_widget_title = esc_html($extract_shortcode['title']);
 
     include_once plugin_dir_path( __FILE__ ) . 'includes/ccc_calculator_view.php';
 
     return $calc_template;
   }
+
+
+  /*
+  * Adjust color brightness
+  * @params: color_code and brightness
+  */
+    public function ccc_adjust_color_brightness( $hex, $steps ) {
+        // Steps should be between -255 and 255. Negative = darker, positive = lighter
+        $steps = max(-255, min(255, $steps));
+        // Normalize into a six character long hex string
+        $hex = str_replace('#', '', $hex);
+        //#81d742-
+        if (strlen($hex) == 3) {
+            $hex = str_repeat(substr($hex,0,1), 2).str_repeat(substr($hex,1,1), 2).str_repeat(substr($hex,2,1), 2);
+        }
+
+        // Split into three parts: R, G and B
+        $color_parts = str_split($hex, 2);
+        $return = '#';
+        foreach ($color_parts as $color) {
+            $color   = hexdec($color); // Convert to decimal
+
+            $color   = max(0,min(255,$color + $steps)); // Adjust color
+
+            $return .= str_pad(dechex($color), 2, '0', STR_PAD_LEFT); // Make two char hex code
+
+        }
+        return $return;
+    }
+
 
   public function ccc_get_ajax_data() {
     $this->ccc_get_otptions();

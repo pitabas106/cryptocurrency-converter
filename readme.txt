@@ -5,8 +5,8 @@ Author URI: https://www.nettantra.com/wordpress/?utm_src=cryptocurrency-converte
 Author: NetTantra
 Requires at least: 4.5
 Tested up to: 5.2
-Version: 0.4
-Stable tag: 0.4
+Version: 0.6
+Stable tag: 0.6
 Requires PHP: 5.2
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
@@ -56,6 +56,12 @@ How to install the plugin.
 
 
 == Changelog ==
+
+= 0.5 =
+* Fixed PHP conditional issue
+
+= 0.5 =
+* Added color picker to color scheme layout options
 
 = 0.4 =
 * Added color scheme images

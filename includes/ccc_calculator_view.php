@@ -44,6 +44,20 @@ var ccc_option_theme =  "<?php echo $this->ccc_option_theme; ?>";
     $theme_boxshadow_color = '#ef7e2e';
     $theme_selected_bg_color = '#ea6a0f';
   }
+
+  if( $this->ccc_option_custom_color ) {
+
+    $custom_color = $this->ccc_option_custom_color;
+    $this->ccc_option_theme = $custom_color; //set custom color to option_theme
+
+    $theme_bg_color = $custom_color;
+    $theme_border_color = $this->ccc_adjust_color_brightness( $custom_color, 60 );
+    $theme_boxshadow_color = $this->ccc_adjust_color_brightness( $custom_color, 100 );
+    $theme_selected_bg_color = $custom_color;
+
+  }
+
+
 ?>
 <?php if($this->ccc_option_theme) : ?>
   <style media="screen">
@@ -56,6 +70,12 @@ var ccc_option_theme =  "<?php echo $this->ccc_option_theme; ?>";
   body .nt-ccc-widget .ccc-title {
     margin-top: 0;
   }
+  
+  <?php if( $this->ccc_option_custom_color ) :?>
+    body #nt_ccc_result.ccc-loading {
+      background-color: <?php echo $this->ccc_adjust_color_brightness( $custom_color, 210 ); ?>; 
+    }
+  <?php endif; ?>
 
   .select2-container--default .ccc-select2-dropdown .select2-search--dropdown .select2-search__field,
   .nt-ccc-widget .select2-container--default .ccc-select2-dropdown .select2-selection--single,
